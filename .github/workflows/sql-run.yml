@@ -1,0 +1,45 @@
+name: SQL run (manual)
+
+# Manual only: click "Run workflow" in the Actions tab. No push / PR / schedule triggers.
+# Runs the project's SQL on a real PostgreSQL 16 and compares every view with the exported CSV.
+on:
+  workflow_dispatch:
+  push:
+    branches: [ci/checks-and-env-cleanup]   # TEMPORARY: to test before merge
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hr_bi
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: hr_bi
+    steps:
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
+      - name: Tables, data and views (any SQL error stops the job)
+        run: |
+          for f in sql/ddl/create_tables.sql sql/dml/insert_data.sql sql/ddl/create_views.sql; do
+            echo "== $f"; psql -v ON_ERROR_STOP=1 -q -f "$f"
+          done
+      - name: Analysis and data-quality queries run without errors
+        run: |
+          psql -v ON_ERROR_STOP=1 -q -f sql/dql/analysis_queries.sql > /dev/null
+          psql -v ON_ERROR_STOP=1 -q -f sql/dql/test_select.sql > /dev/null
+      - name: Compare the 6 views with the exported CSV and check the README figures
+        run: uv run --no-project --with pandas --with psycopg2-binary python .github/scripts/check_views.py
