@@ -4,8 +4,6 @@ name: SQL run (manual)
 # Runs the project's SQL on a real PostgreSQL 16 and compares every view with the exported CSV.
 on:
   workflow_dispatch:
-  push:
-    branches: [ci/checks-and-env-cleanup]   # TEMPORARY: to test before merge
 
 permissions:
   contents: read
