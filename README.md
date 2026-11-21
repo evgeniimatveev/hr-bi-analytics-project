@@ -13,7 +13,7 @@
 
 Analyzed HR data for **30 employees across 5 departments** (Engineering, Sales, Finance, Marketing, HR) to surface compensation inequities and hiring trends for strategic workforce decisions.
 
-**Key finding:** Sales department leads in average salary ($102K) — 17% above the company average of $87K — while Marketing carries the largest headcount (23% of workforce).
+**Key finding:** Sales department leads in average salary ($102K) — 18% above the company average of $87K — while Marketing carries the largest headcount (23% of workforce).
 
 **Pipeline:** `PostgreSQL → SQL Views → Python Export → Tableau Dashboard`
 
@@ -35,7 +35,7 @@ Analyzed HR data for **30 employees across 5 departments** (Engineering, Sales, 
 | Which department leads in average salary? | Sales — $102,400 avg |
 | What is the salary spread? | $58K (min) → $135K (max), range = $77K |
 | When did hiring peak? | 2019–2020 — highest intake years |
-| Which roles dominate salary budget? | DevOps Engineers + Sales Reps = largest salary investment |
+| Which roles dominate salary budget? | Marketing Analysts ($333K), DevOps Engineers ($327K) and Sales Representatives ($309K) |
 
 ---
 
@@ -106,24 +106,21 @@ PostgreSQL (source)
 ## Project Structure
 
 ```
-mlops_hr_bi_project/
+hr-bi-analytics-project/
 ├── README.md
-├── .env.example
+├── .env.example             # copy to .env (the real .env stays local)
 ├── requirements.txt
-├── data/                    # exported CSV views
-│   ├── employee_full_info_*.csv
-│   ├── avg_salary_by_department_*.csv
-│   ├── count_by_position_*.csv
-│   └── salary_trends_*.csv
+├── data/                    # the 6 exported views as CSV (suffix = export time)
 ├── sql/
-│   ├── ddl/                 # schema & views
+│   ├── ddl/                 # tables and views
 │   ├── dml/                 # data inserts
-│   └── dql/                 # analysis queries
+│   └── dql/                 # analysis and data-quality queries
 ├── scripts/
 │   └── export_views.py
-└── tableau/
-    ├── dashboard.twbx
-    └── screenshots/
+├── tableau/
+│   ├── hr_workforce_analysis.twbx
+│   └── screenshots/
+└── .github/                 # CI
 ```
 
 ---
@@ -163,6 +160,15 @@ DB_PASSWORD=your_password
 DB_HOST=localhost
 DB_PORT=5432
 ```
+
+---
+
+## Continuous integration
+
+| Workflow | When | What it does |
+|----------|------|--------------|
+| [`files-check.yml`](.github/workflows/files-check.yml) | every push and pull request | `.env` must not be tracked, all SQL parses as PostgreSQL, the script compiles, the CSV files are not empty, README links lead to existing files |
+| [`sql-run.yml`](.github/workflows/sql-run.yml) | **manual**: Actions → *SQL run (manual)* → *Run workflow* | Starts PostgreSQL 16, runs the DDL, inserts and views, runs the analysis and test queries, compares **each of the 6 views with its exported CSV**, and re-computes the figures quoted in this README |
 
 ---
 
